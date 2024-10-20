@@ -10,16 +10,24 @@
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#ffffff",
+      "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+      "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
+      "recordAudioAndroid": true
+      
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to take photos."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": ["CAMERA"]
     },
     "web": {
       "bundler": "metro",
