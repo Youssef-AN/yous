@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Bean Classification</title>
+    <!--<style>
+        /* CSS goes here */
+        #output-canvas {
+            width: 100%;           /* Canvas adapts to screen width */
+            height: auto;          /* Maintains aspect ratio */
+            max-width: 640px;      /* Restrict to original width */
+            border: 1px solid black; /* Optional border for better visibility */
+        }
+    </style>-->
+</head>
+<body>
+    <h1>Bean Classification</h1>
+    <video id="camera-feed" autoplay playsinline muted style="display: none;"></video>  <!-- Hidden, used only for capturing frames -->
+    <canvas id="output-canvas" width="320" height="320"></canvas>  <!-- Display the annotated frames here -->
+
+    <script>
+        // Set up WebSocket connection to FastAPI server
+        const ws = new WebSocket('wss://ec5d-165-85-220-33.ngrok-free.app');  // Secure WebSocket URL - Change to 8080 port URL
+
+        // Access video and canvas elements
+        const video = document.getElementById('camera-feed');
+        const canvas = document.getElementById('output-canvas');
+        const context = canvas.getContext('2d');
+
+        // Request camera access
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
+            .then(stream => {
+                // Set up video source from camera stream
+                video.srcObject = stream;
+                video.play();  // Start the video feed
+
+                // Start processing the video stream and send frames to the server
+                video.addEventListener('play', () => {
+                    const sendFrame = () => {
+                        // Draw the current video frame onto the canvas
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        
+                        // Convert canvas to Base64 image for transmission
+                        canvas.toBlob(blob => {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                                const frameBase64 = reader.result.split(',')[1];
+                                ws.send(frameBase64);  // Send Base64 frame to server
+                            };
+                            reader.readAsDataURL(blob);
+                        }, 'image/jpeg');
+                    };
+
+                    // Start the first frame capture
+                    sendFrame();
+
+                    // Receive annotated frames from the server and display them on the canvas
+                    ws.onmessage = event => {
+                        const response = JSON.parse(event.data); // Parse JSON response
+                        const { frame, predictions } = response; // Access frame and prediction data
+
+                        // Clear the canvas
+                        context.clearRect(0, 0, canvas.width, canvas.height);
+
+                        // Display the received frame (Base64) as background
+                        const img = new Image();
+                        img.src = 'data:image/jpeg;base64,' + frame;
+                        img.onload = () => {
+                            context.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                            // Overlay annotations (label, confidence, bounding box)
+                            predictions.forEach(pred => {
+                                const { label, confidence, bbox } = pred;
+                                const [x1, y1, x2, y2] = bbox; // Bounding box coordinates
+
+                                // Draw the bounding box
+                                context.strokeStyle = "LimeGreen";
+                                context.lineWidth = 2;
+                                context.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+                                // Draw label and confidence score above the bounding box
+                                context.font = "16px Arial";
+                                context.fillStyle = "LimeGreen";
+                                context.fillText(`${label}: ${confidence.toFixed(2)}`, x1, y1 - 10);
+                            });
+                        };
+
+                        // Capture the next frame only after receiving a response
+                        //setTimeout(sendFrame, 100); // Send every 100ms
+                        requestAnimationFrame(sendFrame);
+                    };
+                });
+            })
+            .catch(error => {
+                console.error('Error accessing webcam:', error);
+                alert('Please allow camera access to start real-time classification.');
+            });
+
+        // WebSocket error handling
+        ws.onerror = error => console.error('WebSocket error:', error);
+    </script>
+</body>
+</html>
