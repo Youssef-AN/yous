@@ -1,19 +1,23 @@
-import http.server
-import ssl
+import os
+from flask import Flask, jsonify
+from flask_cors import CORS
 
-# Set up server address and handler
-server_address = ('0.0.0.0', 8080)
-handler = http.server.SimpleHTTPRequestHandler
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app)
 
-# Create the HTTP server instance
-httpd = http.server.HTTPServer(server_address, handler)
+# Define a simple route for testing
+@app.route("/")
+def home():
+    return jsonify({"message": "Flask server is running!"})
 
-# Configure SSL context
-#ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-#ssl_context.load_cert_chain(certfile="./opticrop-key.pem", keyfile="./opticrop.pem")
+# Define additional routes if needed
+@app.route("/api/process-image", methods=["POST"])
+def process_image():
+    return jsonify({"message": "This is where image processing logic will go."})
 
-# Wrap the server's socket with SSL
-#httpd.socket = ssl_context.wrap_socket(httpd.socket, server_side=True)
-
-print("Serving on https://localhost:8080")
-httpd.serve_forever()
+# Run the app
+if __name__ == "__main__":
+    # Use dynamic port for Heroku or default to 5000
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
